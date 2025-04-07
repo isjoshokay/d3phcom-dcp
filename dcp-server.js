@@ -32,20 +32,12 @@ sendEmail.setApiKey(process.env.SENDGRID_API_KEY)
 // spear fishing or wide net?
 let mode = "spearfishing"
 let gauge = 0.0
-let firstTweets = []
 
-async function getFirstTweets(){
-    firstTweets = await Tweets.find().sort({post_date: -1}).limit(9).catch(err => console.log(err))
-    return firstTweets
-}
-async function getTweetMetrics(tweet_id) {
-    return await THV.find({tweet_id: tweet_id}).catch(err => console.log(err))
-}
 
-firstTweets = getFirstTweets()
-console.log(`First Tweets: ${firstTweets}`)
+
+// Configure CORS middleware to allow requests from specified origins and methods
 app.use(cors({
-    origin: ["https://d3ph.com", "http://localhost:3000" , "d3phcom-live.vercel.app"],
+    origin: ["https://d3ph.com", "http://localhost:3000", "d3phcom-live.vercel.app"],
     methods: ["GET", "POST"],
     allowedHeaders: ["Content-Type"]
 }))
@@ -77,103 +69,10 @@ const io = new Server(server, {
     let hvals = await HistVals.find()
     .sort({post_date: -1}).limit(1000)
 
-    
-    // access the origin of the socket to determine which hvals to send
-    let origin = socket.handshake.headers.origin
-    if (origin.includes('d3ph.com')) {
-        socket.emit('hvals', hvals[0].final_gauge)
-    } else {
-        const totalTweets = await Tweets.countDocuments()
-        socket.emit('hvals', hvals)
-        // socket.emit('tweets', {
-        //     newTweets: firstTweets,
-        //     currentPage: 1,
-        //     totalPages: Math.ceil(totalTweets / 9)
-        // })
-    } 
-
-    
-    console.log(`hvals: ${hvals.length}`)
-    
-    await getKws().then((fe_kws) => {
-        socket.emit('kws', fe_kws)
-        console.log(`fe_kws: ${fe_kws}`)
-    })
-    
-    socket.on('getTweets', async (object) => {
-        // object should contain the current page that the user is on, as well as the limit of tweets per page
-        try {
-            // collect new tweets based on the page the user passed in and the limit (sort by date, newest first)
-            const newTweets = await Tweets.find()
-            .sort({post_date: -1})
-            .skip((object.page - 1) * object.limit)
-            .limit(object.limit)
-            
-            // for pagination metadata, count the total number of tweets
-            const totalTweets = await Tweets.countDocuments()
-            console.log(`TOTAL TWEETS BEING SENT TO FE: ${totalTweets}`)
-            // emit the new tweets, the current page, and the total number of pages
-            socket.emit('tweets', {
-                newTweets,
-                currentPage: object.page,
-                totalPages: Math.ceil(totalTweets / object.limit)
-            })
-
-        } catch (error) {
-            socket.emit('getTweetsError', {message: "Failed to fetch tweets."})
-        }
-    })
-    
     socket.on('disconnect', () => {
-      numOfUsers -= 1;
-    //   socket.broadcast.emit('audience', numOfUsers)
-      console.log(`${socket.id} has left (${numOfUsers} remaining)`)
-    })
-    socket.on('createUser', (users) => {
-        console.log(`User(s) requested: ${users}`)
-        // getNewUsers(users).then(() => console.log("Finished gathering new user(s)"))
-        getNewUsers(users).then((userNames) => {
-            console.log('userNames var:', userNames)
-            socket.emit('successAddUser', userNames)
-        })
-    })
-    socket.on('mode', modestr => { // when any user changes the mode, it is broadcasted to all for change
-        mode = modestr
-        console.log('mode', mode)
-        socket.broadcast.emit('mode', mode)
+      console.log('Content Delivery Server Disconnected. Something is wrong.')
     })
 
-    socket.on('tweet_metrics', async tweet_id => {
-        // log that the user has requested tweet metrics
-        console.log('user has requested tweet metrics on tweet_id', tweet_id)
-        let metrics =  await getTweetMetrics(tweet_id)
-        let retweets = metrics.map(obj => {
-            return {
-                post_date: obj.post_date,
-                num_retweets:obj.retweet_count
-            }
-        })
-        let likes = metrics.map(obj => {
-            return {
-                post_date: obj.post_date,
-                num_likes:obj.like_count
-            }
-        })
-        let replies = metrics.map(obj => {
-            return {
-                post_date: obj.post_date,
-                num_replies: obj.reply_count
-            }
-        })
-        let impressions = metrics.map(obj => {
-            return {
-                post_date: obj.post_date,
-                num_impressions: obj.impression_count
-            }
-        })
-        console.log ({retweets, likes, replies, impressions})
-        socket.emit('tweet_metrics', {retweets, likes, replies, impressions})
-    })
   })
 
   server.listen(PORT, () => {
@@ -314,8 +213,6 @@ mongoose.connect(process.env.MONGODB_URL, {
         }
     }
     
-    // The code for the entire program occurs after a connection to MDB is established
-// getNewUsers();
 const getTweets = cron.schedule(`*/${mode == "widenet" ? 10 : 5} * * * *`, async () => { // every three minutes with specific users, every 10 minutes for everyone. 
     let currentDT = moment()
     const now = new Date()
@@ -383,9 +280,6 @@ const getTweets = cron.schedule(`*/${mode == "widenet" ? 10 : 5} * * * *`, async
     // Gather average sentiment based on Tweet text & Store in MDB Final Gauge
     // Determine whether or not an alert needs to be sent (get score threshold)    
 
-    // update firstTweets to be the most recent tweets
-    firstTweets = await Tweets.find().sort({post_date: -1}).limit(9).catch(err => console.log(err))
-
 })
 const evaluateSentiment = cron.schedule("*/20 * * * *", async () => {
     console.log(`
@@ -405,15 +299,15 @@ const evaluateSentiment = cron.schedule("*/20 * * * *", async () => {
         }
         }).catch(err => console.log(err))
         console.log(`${recentTweets.length} tweets were added to Mongo in the last 30 minutes.`)
-        console.log(recentTweets)
         // Batched request of tweets, prompt for sentiment analysis
         // let batchedTweetText = ""
         // Strip the links out of the text for sending to GPT
         const urlRegex = /https?:\/\/\S+/g;
         recentTweets = recentTweets.map(tweet => {
-            return tweet.text.replace(urlRegex, '')
+            tweet = tweet.text.replace(urlRegex, '')
+            return `{-${tweet}-}`
         })
-        let batchedTweetText = JSON.stringify(recentTweets)
+        let batchedTweetText = recentTweets.join('\n')
         console.log(`
             TWEET BATCH 
             ${batchedTweetText}
@@ -424,22 +318,30 @@ const evaluateSentiment = cron.schedule("*/20 * * * *", async () => {
 
         const gptCall = await gpt.chat.completions.create({
         model: "gpt-3.5-turbo",
-        messages: [{role: "system", content: "Return a parseable JSON object with three attributes. The first attribute being your reasoning behind the sentiment and your recommendation (1-2 sentences) as to whether or not someone living near Taiwan should evacuate based on historical context and the Defcon standard (call it evacuation_recommendation). Please also include a few sentences (max 5) on what tweets most heavily influenced the sentiment value and why--(you must call it influential_tweets). The third attribute being a value for tweets that provide sentiment analysis with values between 0 and 10. Please call it average_sentiment_value. The higher the value, the more likely the overall sentiment is negative. These tweets are about war in taiwan or china, so the most serious sentiment value of 10 will be indicative of a serious situation such as bombs dropping or people currently being killed. We do not care about things that happen in the distant past, only recently (as in today) A 5-6.9 is moreso things are starting to get serious but no real action yet. The tweets will be all batched in a single string. The return should be a number noting average sentiment value of all tweets combined. The final attribute of the object should be something that can go in an email subject line (called email_subject_line) indicating the recommended action in less than 10 words."},
+        messages: [{role: "system", content: `You are receiving a batch of tweets (posts) about war in Taiwan or China. The tweets are separated by braces with dashes inside like this: {-text-}.
+
+Return a parseable JSON object with **four attributes**:
+
+1. **evacuation_recommendation** – A 1–2 sentence reasoning about the overall sentiment and whether someone living near Taiwan should evacuate, based on recent context and the Defcon standard.
+   
+2. **influential_tweets** – Up to 5 sentences explaining which tweets most heavily influenced the sentiment score and why.
+
+3. **average_sentiment_value** – A number from 0 to 10 representing the average sentiment across all tweets. Higher values mean the situation is more dangerous:
+   - 10 = Extremely serious (e.g., bombs dropping, confirmed casualties today)
+   - 5–6.9 = Situation is getting serious, but no confirmed action yet
+   - Ignore distant-past events; focus on **recent** (today's) tweets only.
+
+4. **email_subject_line** – A short subject line (10 words or fewer) for an alert email summarizing the recommended action.
+
+Ensure the output is valid JSON.`},
                     {role: "user", content: batchedTweetText}
                     ]
         })
         console.log("GPT RESULT:\n____________\n")
-        // console.log(gptCall.choices[0].message)
-        // send email with results
-        let gptSentiment = JSON.parse(gptCall.choices[0].message.content)
-        console.log(gptSentiment)
         gauge = gptSentiment.average_sentiment_value
-        console.log(`Gauge: ${gauge}`)
         try {
             if (gptSentiment.average_sentiment_value >= 8.5) {
                 console.log("Sending E-Mail...")
-                // send email >>>THRESHOLD LINE 255<<<
-                // const recipients = ['jpcoder12@gmail.com', 'findfreddy@icloud.com', 'findfreddy@gmail.com']
                 const message = {
                     to: [{email: 'findfreddy@icloud.com'}, {email: 'jpcoder12@gmail.com'}],
                     from: 'myanon808@gmail.com',
@@ -453,7 +355,7 @@ const evaluateSentiment = cron.schedule("*/20 * * * *", async () => {
                 }
                 await sendEmail.send(message).then(response => console.log('Email Sent!\n', response)).catch(err => console.log(err))
             } else {
-                console.log("No email will be sent because the score is not high.")
+                console.log("No email will be sent because the sentiment is at a safe level.")
             }
         } catch (err) {
             console.log(err)
@@ -461,19 +363,14 @@ const evaluateSentiment = cron.schedule("*/20 * * * *", async () => {
         // add final gauge to hist vals w freddy 
         await HistVals.create({
             final_gauge: gauge,
-            post_date: now
+            post_date: now,
+            recommendation: gptSentiment.evacuation_recommendation
         })
         
     } catch(err){
         console.log(err)
     }
-    
-        //  WHAT IF NO TWEETS WERE ADDED IN LAST X MINUTES:???
-    
 
-    
-    
-    // Calc Average Score for each score returned and post final_gauge 
 })
 
 

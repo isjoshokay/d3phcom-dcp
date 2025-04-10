@@ -2,12 +2,13 @@
 import cron from 'node-cron';
 import moment from 'moment';
 import OpenAI from 'openai';
+import config from './config.js';
 import sendEmail from '@sendgrid/mail';
-import Tweets from './models/Tweets.js';
-import HistVals from './models/HistoricalValues.js';
+sendEmail.setApiKey(config.SENDGRID_API_KEY)
+import { Tweets, HistVals } from './models/index.js';
 
 export function scheduleEvaluateSentiment() {
-  return cron.schedule("*/20 * * * *", async () => {
+  return cron.schedule("*/2 * * * *", async () => {
     console.log("\n_______________________________\nPerforming Sentiment Analysis...\n");
 
     try {
@@ -46,14 +47,16 @@ Return a parseable JSON object with **four attributes**:
    
 2. **influential_tweets** – Up to 5 sentences explaining which tweets most heavily influenced the sentiment score and why.
 
-3. **average_sentiment_value** – A number from 0 to 10 representing the average sentiment across all tweets. Higher values mean the situation is more dangerous:
+3. **average_sentiment_value** – A number from 0 to 10 representing the average sentiment across all tweets. The value should always be a one decimal number (i.e. 3.5). Higher values mean the situation is dangerous:
    - 10 = Extremely serious (e.g., bombs dropping, confirmed casualties today)
    - 5–6.9 = Situation is getting serious, but no confirmed action yet
    - Ignore distant-past events; focus on **recent** (today's) tweets only.
 
 4. **email_subject_line** – A short subject line (10 words or fewer) for an alert email summarizing the recommended action.
 
-Ensure the output is valid JSON.`
+Ensure the output is valid JSON. The number of tweets should influence the score--If there is only one or two tweets, it should negate the score, not considerably but enough to make the gauge go down. If there are many tweets, the score should increase.
+Please only consider the tweets to affect the score if they pertain to war in taiwan. If it does not affect the sentiment to war in taiwan, it should not affect the score as much. Feel free to consider the current political climate in and around taiwan as
+it pertains to the tweets given.`
           },
           { role: "user", content: batchedTweetText }
         ]
@@ -84,7 +87,7 @@ Ensure the output is valid JSON.`
             .then(response => console.log('Email Sent!\n', response))
             .catch(err => console.log(err));
         } else {
-          console.log("No email will be sent because the sentiment is at a safe level.");
+          console.log("No alert will be sent because the sentiment is at a safe level.");
         }
       } catch (err) {
         console.log(err);
@@ -92,9 +95,10 @@ Ensure the output is valid JSON.`
 
       // Save the gauge and recommendation to the Historical Values collection
       await HistVals.create({
-        final_gauge: gauge,
+        final_gauge_score: gauge,
         post_date: now,
-        recommendation: gptSentiment.evacuation_recommendation
+        evacuation_recommendation: gptSentiment.evacuation_recommendation,
+        tagline: gptSentiment.email_subject_line
       });
     } catch (err) {
       console.log(err);

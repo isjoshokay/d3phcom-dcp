@@ -1,27 +1,11 @@
 // getTweets.js
 import cron from 'node-cron';
-import moment from 'moment';
-import api from 'axios';
-import Keywords from './models/Keywords.js';
-import Users from './models/twitter_users.js';
-import Tweets from './models/Tweets.js';
-
+import moment from 'moment'; // https://www.youtube.com/watch?v=ARvIYcoVXgI for pulling at time intervals
+import api from 'axios'; // for making api requests to twitter
+import { Keywords, Users, Tweets } from './models/index.js';
 // Helper functions that were previously in dcp-server.js.
-// If these functions are not yet in a separate file, you can move them here or import them from a utils module.
-function toRFC3339(date) {
-  return date.toISOString();
-}
-function getTime(limit) {
-  const now = new Date();
-  const result = new Date(now);
-  if (limit === "hour") {
-    result.setHours(now.getHours() - 1);
-  } else if (limit === "minute") {
-    result.setMinutes(now.getMinutes() - 1);
-  }
-  return result;
-}
-// Assume storeTweetsinMongo is defined here; if not, you can also import it from a utils file.
+import { toRFC3339, getTime } from './utils.js';
+
 async function storeTweetsinMongo(kw, data, currentDT) {
   if (!data) {
     console.log("No data to add to DB for", kw.kw_string);
@@ -67,7 +51,7 @@ export function scheduleGetTweets(mode, authToken) {
       console.log("Error getting VIP users:\n", err);
     });
     if (!vipUsers) {
-      console.error("No VIP users found in Mongo.");
+      console.error("There was an error getting VIP users.");
       return;
     }
     const ugString = vipUsers.map(user => user.username.substring(1)).join(" OR from:");
@@ -80,7 +64,7 @@ export function scheduleGetTweets(mode, authToken) {
         : `(${kw.kw_string}) (from:${ugString}) -is:retweet`;
       try {
         console.log("Getting new tweets...");
-        console.log(`Query: ${myQuery}`);
+        // console.log(`Query: ${myQuery}`); // for logging query
         const newTweets = await api.get(twtrEndpoint, {
           headers: {
             'Authorization': authToken

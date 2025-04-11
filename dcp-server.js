@@ -23,7 +23,7 @@ cron.schedule('0 0,2 * * *', () => {
 })
 // Configure CORS middleware to allow requests from specified origins and methods
 app.use(cors({
-    origin: ["https://d3phcom.herokuapp.com/"], // only allowable from the content delivery server (add localhost for testing)
+    origin: ["https://d3phcom-dcp-fcf20f1c162a.herokuapp.com/"], // only allowable from the content delivery server (add localhost for testing)
     methods: ["GET", "POST"],
     allowedHeaders: ["Content-Type"]
 }))

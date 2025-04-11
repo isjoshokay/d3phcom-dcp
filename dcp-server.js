@@ -1,13 +1,13 @@
-// run
 import moment from 'moment' // for date/time
 import config from './config.js'
-const PORT = config.port // for communicating between server and fe websocket
+const PORT = config.PORT // for communicating between server and fe websocket
 import express from 'express'
 const app = express();
 import http from 'http'
 const server = http.createServer(app)
 import cors from 'cors'
 import mongoose from 'mongoose'
+import cron from 'node-cron'
 import { scheduleGetTweets } from './getTweets.js'; // getTweets function
 import { scheduleEvaluateSentiment } from './evaluate_sentiment.js'; // evaluate_sentiment function
 // https://www.youtube.com/watch?v=xUqvXaiCmHI <-- for going live on cpanel

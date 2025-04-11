@@ -32,7 +32,7 @@ app.use(cors({
 import {Server} from 'socket.io'
 const io = new Server(server, {
     cors: {
-      origin: ["https://d3ph.com", "http://localhost:3000", "d3phcom-live.vercel.app"],
+      origin: ["https://d3ph.com", "http://localhost:3000", "https://d3phcom-live.vercel.app"],
       methods: ["GET", "POST"],
       transports: ['websocket', 'polling']
     },

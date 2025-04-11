@@ -11,7 +11,15 @@ import { scheduleGetTweets } from './getTweets.js'; // getTweets function
 import { scheduleEvaluateSentiment } from './evaluate_sentiment.js'; // evaluate_sentiment function
 // https://www.youtube.com/watch?v=xUqvXaiCmHI <-- for going live on cpanel
 let mode = "spearfishing"
-
+// Toggle mode variable between "spearfishing" and "widenet" once per day
+cron.schedule('0 0,2 * * *', () => {
+    if (mode === "spearfishing") {
+        mode = "widenet"
+    } else {
+        mode = "spearfishing"
+    }
+    console.log(`Mode set to ${mode}`)
+})
 // Configure CORS middleware to allow requests from specified origins and methods
 app.use(cors({
     origin: ["https://d3phcom.herokuapp.com/"], // only allowable from the content delivery server (add localhost for testing)

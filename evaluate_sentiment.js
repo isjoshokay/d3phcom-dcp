@@ -8,7 +8,7 @@ sendEmail.setApiKey(config.SENDGRID_API_KEY)
 import { Tweets, HistVals } from './models/index.js';
 
 export function scheduleEvaluateSentiment() {
-  return cron.schedule("*/2 * * * *", async () => {
+  return cron.schedule("*/15 * * * *", async () => {
     console.log("\n_______________________________\nPerforming Sentiment Analysis...\n");
 
     try {

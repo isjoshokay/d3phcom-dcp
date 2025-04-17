@@ -13,7 +13,7 @@ import { scheduleEvaluateSentiment } from './evaluate_sentiment.js'; // evaluate
 // https://www.youtube.com/watch?v=xUqvXaiCmHI <-- for going live on cpanel
 let mode = "spearfishing"
 // Toggle mode variable between "spearfishing" and "widenet" once per day
-cron.schedule('0 0,2 * * *', () => {
+cron.schedule('0 0,1 * * *', () => {
     if (mode === "spearfishing") {
         mode = "widenet"
     } else {

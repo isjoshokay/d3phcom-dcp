@@ -223,7 +223,37 @@ const Users = mongoose.model('tw_users', {
         type: String
     }
 })
-
+const dc_users = mongoose.model('dc_users', {
+    username: {
+        type: String,
+        index: true,
+        unique: true
+    },
+    first_name: {
+        type: String
+    },
+    email: {
+        type: String,
+        required: true,
+        unique: true
+    },
+    password: {
+        type: String,
+        required: true
+    },
+    isSubscribed: {
+        type: Boolean,
+        default: false,
+        required: true
+    },
+    created_at: {
+        type: Date,
+        required: true
+    },
+    tweet_bookmarks: { // array of tweet ids for users to bookmark
+        type: [String]
+    }
+})
 
 // Export all models
-export { BlogModel, HistVals, Keywords, PHV, THV, Tweets, Users }
+export { BlogModel, HistVals, Keywords, PHV, THV, Tweets, Users, dc_users }

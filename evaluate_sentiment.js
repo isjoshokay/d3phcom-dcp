@@ -47,7 +47,7 @@ Return a parseable JSON object with **four attributes**:
 
 1. **evacuation_recommendation** – A 1–2 sentence reasoning about the overall sentiment and whether someone living near Taiwan should evacuate, based on recent context and the Defcon standard.
    
-2. **influential_tweets** – Up to 5 sentences explaining which tweets most heavily influenced the sentiment score and why. Only identify the tweets by ID number.
+2. **influential_tweets** – Up to 5 sentences explaining which tweets most heavily influenced the sentiment score and why. Only identify the tweets by ID number of the tweet, it should be after the phrase "-ID:".
 
 3. **average_sentiment_value** – A number from 0 to 10 representing the average sentiment across all tweets. The value should always be a one decimal number (i.e. 3.5). Higher values mean the situation is dangerous:
    - 10 = Extremely serious (e.g., bombs dropping, confirmed casualties today)

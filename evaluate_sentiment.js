@@ -13,21 +13,23 @@ export function scheduleEvaluateSentiment() {
 
     try {
       const now = moment().utc();
-      const thirtyMinutesAgo = moment(now).utc().subtract(30, "minutes").toDate();
-      console.log(`Thirty minutes ago: ${thirtyMinutesAgo}`);
+      const n = 15 // change this variable to change how many minutes to go back
+      const tweetBatchRange = moment(now).utc().subtract(n, "minutes").toDate();
+      console.log(`Thirty minutes ago: ${tweetBatchRange}`);
 
-      // Get all tweets added in the last 30 minutes
+      // Get all tweets added in the last n minutes
       let recentTweets = await Tweets.find({
-        post_date: { $gte: thirtyMinutesAgo }
+        post_date: { $gte: tweetBatchRange }
       }).catch(err => console.log(err));
 
-      console.log(`${recentTweets.length} tweets were added to Mongo in the last 30 minutes.`);
+      console.log(`${recentTweets.length} tweets were added to Mongo in the last ${n} minutes.`);
 
       // Clean tweet texts by stripping URLs and formatting
       const urlRegex = /https?:\/\/\S+/g;
+      let recentTweetIds = recentTweets.map(tweet => tweet.tweet_id);
       recentTweets = recentTweets.map(tweet => {
         const cleanedText = tweet.text.replace(urlRegex, '');
-        return `{-${cleanedText}-}`;
+        return `{-ID: ${tweet.tweet_id}, text: ${cleanedText}-}`;
       });
       let batchedTweetText = recentTweets.join('\n');
       console.log(`TWEET BATCH:\n${batchedTweetText}`);
@@ -45,7 +47,7 @@ Return a parseable JSON object with **four attributes**:
 
 1. **evacuation_recommendation** – A 1–2 sentence reasoning about the overall sentiment and whether someone living near Taiwan should evacuate, based on recent context and the Defcon standard.
    
-2. **influential_tweets** – Up to 5 sentences explaining which tweets most heavily influenced the sentiment score and why.
+2. **influential_tweets** – Up to 5 sentences explaining which tweets most heavily influenced the sentiment score and why. Only identify the tweets by ID number.
 
 3. **average_sentiment_value** – A number from 0 to 10 representing the average sentiment across all tweets. The value should always be a one decimal number (i.e. 3.5). Higher values mean the situation is dangerous:
    - 10 = Extremely serious (e.g., bombs dropping, confirmed casualties today)
@@ -98,7 +100,9 @@ it pertains to the tweets given.`
         final_gauge_score: gauge,
         post_date: now,
         evacuation_recommendation: gptSentiment.evacuation_recommendation,
-        tagline: gptSentiment.email_subject_line
+        tagline: gptSentiment.email_subject_line,
+        influence_tweet_ids: recentTweetIds,
+
       });
     } catch (err) {
       console.log(err);

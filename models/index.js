@@ -70,6 +70,9 @@ const HistVals = mongoose.model('final_historical_values', {
     },
     tagline: { // subject_text from the AI sentiment object returned from OpenAI
         type: String
+    },
+    influence_tweet_ids: {
+        type: [String] // tweet ids that influenced the score
     }
 })
 const Keywords = mongoose.model('keywords', {

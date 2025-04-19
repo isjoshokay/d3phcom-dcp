@@ -15,7 +15,7 @@ export function scheduleEvaluateSentiment() {
       const now = moment().utc();
       const n = 15 // change this variable to change how many minutes to go back
       const tweetBatchRange = moment(now).utc().subtract(n, "minutes").toDate();
-      console.log(`Thirty minutes ago: ${tweetBatchRange}`);
+      console.log(`Checking tweets added in the last ${n} minutes ago: (${tweetBatchRange})`);
 
       // Get all tweets added in the last n minutes
       let recentTweets = await Tweets.find({
@@ -29,7 +29,7 @@ export function scheduleEvaluateSentiment() {
       let recentTweetIds = recentTweets.map(tweet => tweet.tweet_id);
       recentTweets = recentTweets.map(tweet => {
         const cleanedText = tweet.text.replace(urlRegex, '');
-        return `{-ID: ${tweet.tweet_id}, text: ${cleanedText}-}`;
+        return `{-ID: #${tweet.tweet_id}, text: ${cleanedText}-}`;
       });
       let batchedTweetText = recentTweets.join('\n');
       console.log(`TWEET BATCH:\n${batchedTweetText}`);

@@ -39,7 +39,7 @@ async function storeTweetsinMongo(kw, data, currentDT) {
 const twtrEndpoint = `https://api.twitter.com/2/tweets/search/recent`;
 
 export function scheduleGetTweets(mode, authToken) {
-  return cron.schedule(`*/${mode === "widenet" ? 10 : 5} * * * *`, async () => {
+  return cron.schedule(`10 */${mode === "widenet" ? 10 : 5} * * * *`, async () => {
     const currentDT = moment();
     console.log("Gathering new tweets...", moment().format('MMM Do hh:mm:ss'));
 

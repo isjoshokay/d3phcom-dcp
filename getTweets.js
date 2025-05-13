@@ -2,7 +2,7 @@
 import cron from 'node-cron';
 import moment from 'moment'; // https://www.youtube.com/watch?v=ARvIYcoVXgI for pulling at time intervals
 import api from 'axios'; // for making api requests to twitter
-import { Keywords, Users, Tweets } from './models/index.js';
+import { Keywords, Users, Tweets, THV } from './models/index.js';
 // Helper functions that were previously in dcp-server.js.
 import { toRFC3339, getTime } from './utils.js';
 
@@ -11,7 +11,7 @@ async function storeTweetsinMongo(kw, data, currentDT) {
     console.log("No data to add to DB for", kw.kw_string);
   } else {
     console.log("Storing tweets in DB...");
-    const tweetsData = data.map(tweet => ({
+    let tweetsData = data.map(tweet => ({
       post_date: currentDT.utc(),
       created_at: moment(tweet.created_at),
       text: tweet.text,
@@ -20,6 +20,17 @@ async function storeTweetsinMongo(kw, data, currentDT) {
       author_id: tweet.author_id,
       convo_id: tweet.conversation_id,
     }));
+    let THVData = data.map(tweet => {
+      return {
+        tweet_id: tweet.id,
+        post_date: currentDT.utc(),
+        retweet_count: tweet.public_metrics.retweet_count,
+        reply_count: tweet.public_metrics.reply_count,
+        like_count: tweet.public_metrics.like_count,
+        quote_count: tweet.public_metrics.quote_count,
+        impression_count: tweet.public_metrics.impression_count
+      }
+    })
     try {
       await Tweets.insertMany(tweetsData, { ordered: false })
         .catch(err => {
@@ -29,7 +40,16 @@ async function storeTweetsinMongo(kw, data, currentDT) {
           } else {
             console.log("No tweets were inserted into the database for", kw.kw_string);
           }
-        });
+        })
+      await THV.insertMany(THVData, { ordered: false })
+        .catch(err => {
+          const numInserted = err.result.result.nInserted;
+          if (numInserted > 0) {
+            console.log(`${kw.kw_string}: ${numInserted} historical values were inserted into Mongo.`);
+          } else {
+            console.log("No historical values were inserted into the database for", kw.kw_string);
+          }
+        })
     } catch (err) {
       console.log(err);
     }

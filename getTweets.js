@@ -19,7 +19,7 @@ async function storeTweetsinMongo(kw, data, currentDT) {
       tweet_id: tweet.id,
       author_id: tweet.author_id,
       convo_id: tweet.conversation_id,
-    }));
+    }))
     let THVData = data.map(tweet => {
       return {
         tweet_id: tweet.id,
